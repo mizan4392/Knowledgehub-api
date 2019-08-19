@@ -6,7 +6,7 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 
-const { validateSignupData,validateLoginData } = require('../util/validators');
+const { validateSignupData,validateLoginData,reduceUserDetails } = require('../util/validators');
 firebase.initializeApp(firebaseConfig);
 
 exports.signup = (req,res) =>{
@@ -80,6 +80,69 @@ exports.login =(req,res)=>{
     
 }
 
+exports.addUserDetails = (req, res) => {
+    let userDetails = reduceUserDetails(req.body);
+  
+    db.doc(`/users/${req.user.userName}`)
+      .update(userDetails)
+      .then(() => {
+        return res.json({ message: 'Details added successfully' });
+      })
+      .catch((err) => {
+        console.error(err);
+        return res.status(500).json({ error: err.code });
+      });
+};
+
+//get own user Details
+exports.getAuthenticatedUser = (req, res) => {
+    let userData = {};
+    db.doc(`/users/${req.user.userName}`)
+      .get()
+      .then((doc) => {
+        if (doc.exists) {
+          userData.credentials = doc.data();
+          return db
+            .collection('likes')
+            .where('userName', '==', req.user.userName)
+            .get();
+        }
+      })
+      .then((data) => {
+        userData.likes = [];
+        data.forEach((doc) => {
+          userData.likes.push(doc.data());
+        });
+        return res.json(userData);
+        // return db
+        //   .collection('notifications')
+        //   .where('recipient', '==', req.user.handle)
+        //   .orderBy('createdAt', 'desc')
+        //   .limit(10)
+        //   .get();
+      })
+    //   .then((data) => {
+    //     userData.notifications = [];
+    //     data.forEach((doc) => {
+    //       userData.notifications.push({
+    //         recipient: doc.data().recipient,
+    //         sender: doc.data().sender,
+    //         createdAt: doc.data().createdAt,
+    //         screamId: doc.data().screamId,
+    //         type: doc.data().type,
+    //         read: doc.data().read,
+    //         notificationId: doc.id
+    //       });
+    //     });
+    //     return res.json(userData);
+    //   })
+      .catch((err) => {
+        console.error(err);
+        return res.status(500).json({ error: err.code });
+      });
+  };
+
+
 exports.uplodImage = (req,res) =>{
     const busboy = new BusBoy({headers:req.headers});
 
@@ -120,3 +183,5 @@ exports.uplodImage = (req,res) =>{
     })
     busboy.end(req.rawBody);
 }
+
+
