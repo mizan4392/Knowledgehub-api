@@ -52,7 +52,7 @@ exports.signup = (req,res) =>{
         })
         .catch(err=>{
             console.error(err);
-            return res.status(400).json({error:err.code});
+            return res.status(400).json({general:'Somthing went wrong , plese try again'});
         })
 }
 
@@ -75,7 +75,7 @@ exports.login =(req,res)=>{
         })
         .catch(err=>{
             console.error(err)
-            return res.status(500).json({error:err.code})
+            return res.status(500).json({general:'Wrong Credintial, plese try again'})
         })
     
 }
@@ -113,29 +113,29 @@ exports.getAuthenticatedUser = (req, res) => {
         data.forEach((doc) => {
           userData.likes.push(doc.data());
         });
-        return res.json(userData);
-        // return db
-        //   .collection('notifications')
-        //   .where('recipient', '==', req.user.handle)
-        //   .orderBy('createdAt', 'desc')
-        //   .limit(10)
-        //   .get();
+        
+        return db
+          .collection('notifications')
+          .where('recipient', '==', req.user.userName)
+          .orderBy('createdAt', 'desc')
+          .limit(10)
+          .get();
       })
-    //   .then((data) => {
-    //     userData.notifications = [];
-    //     data.forEach((doc) => {
-    //       userData.notifications.push({
-    //         recipient: doc.data().recipient,
-    //         sender: doc.data().sender,
-    //         createdAt: doc.data().createdAt,
-    //         screamId: doc.data().screamId,
-    //         type: doc.data().type,
-    //         read: doc.data().read,
-    //         notificationId: doc.id
-    //       });
-    //     });
-    //     return res.json(userData);
-    //   })
+      .then((data) => {
+        userData.notifications = [];
+        data.forEach((doc) => {
+          userData.notifications.push({
+            recipient: doc.data().recipient,
+            sender: doc.data().sender,
+            createdAt: doc.data().createdAt,
+            postId: doc.data().postId,
+            type: doc.data().type,
+            read: doc.data().read,
+            notificationId: doc.id
+          });
+        });
+        return res.json(userData);
+      })
       .catch((err) => {
         console.error(err);
         return res.status(500).json({ error: err.code });
@@ -184,4 +184,59 @@ exports.uplodImage = (req,res) =>{
     busboy.end(req.rawBody);
 }
 
+//get any user's detailes
+exports.getUserDetails = (req,res) =>{
 
+    let userData = {};
+  db.doc(`/users/${req.params.userName}`)
+    .get()
+    .then((doc) => {
+      if (doc.exists) {
+        userData.user = doc.data();
+        return db
+          .collection('posts')
+          .where('userName', '==', req.params.userName)
+          .orderBy('createdAt', 'desc')
+          .get();
+      } else {
+        return res.status(404).json({ errror: 'User not found' });
+      }
+    })
+    .then((data) => {
+      userData.posts = [];
+      data.forEach((doc) => {
+        userData.posts.push({
+          body: doc.data().body,
+          createdAt: doc.data().createdAt,
+          userName: doc.data().userName,
+          userImage: doc.data().userImage,
+          likeCount: doc.data().likeCount,
+          commentCount: doc.data().commentCount,
+          postId: doc.id
+        });
+      });
+      return res.json(userData);
+    })
+    .catch((err) => {
+      console.error(err);
+      return res.status(500).json({ error: err.code });
+    });
+}
+
+exports.markNotificationsRead =(req,res)=>{
+
+    let batch = db.batch();
+    req.body.forEach((notificationId) => {
+      const notification = db.doc(`/notifications/${notificationId}`);
+      batch.update(notification, { read: true });
+    });
+    batch
+      .commit()
+      .then(() => {
+        return res.json({ message: 'Notifications marked read' });
+      })
+      .catch((err) => {
+        console.error(err);
+        return res.status(500).json({ error: err.code });
+      });
+}
