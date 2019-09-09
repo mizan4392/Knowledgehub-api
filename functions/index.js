@@ -1,5 +1,8 @@
 const functions = require('firebase-functions');
 const app = require('express')();
+const cors = require('cors');
+
+app.use(cors());
 
 const {getAllPosts,newPost,getPost,commentOnPost,likeOnPost,unlikeOnPost,deletePost} =require('./routes/post');
 const {signup,login,uplodImage,addUserDetails,getAuthenticatedUser,getUserDetails,markNotificationsRead} = require('./routes/user');

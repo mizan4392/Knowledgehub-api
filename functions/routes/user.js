@@ -71,7 +71,9 @@ exports.login =(req,res)=>{
             return data.user.getIdToken()
         })
         .then(token =>{
-            return res.json({token:token})
+            return res.json({
+              token:token
+            })
         })
         .catch(err=>{
             console.error(err)

@@ -1,14 +1,16 @@
 const {db} = require('../util/admin');
 
 exports.getAllPosts = (req,res) =>{
+
     db.collection('posts').orderBy('createdAt','desc').get()
     .then(data =>{
-        let posts = []
+        let posts = [];
+
         data.forEach(doc =>{
             posts.push({
                 postId:doc.id,
                 body:doc.data().body,
-                userName:doc.data.userName,
+                userName:doc.data().userName,
                 createdAt:doc.data().createdAt,
                 commentCount:doc.data().commentCount,
                 likeCount:doc.data().likeCount,
@@ -107,7 +109,6 @@ exports.commentOnPost = (req,res)=>{
 }
 //like on post
 exports.likeOnPost = (req,res) =>{
-
     const likeDocument = db
     .collection('likes')
     .where('userName', '==', req.user.userName)
@@ -138,7 +139,11 @@ exports.likeOnPost = (req,res) =>{
             userName: req.user.userName
           })
           .then(() => {
-            postData.likeCount++;
+            if(postData.likeCount >= 0){
+              postData.likeCount++;
+            }else{
+              postData.likeCount = 0;
+            }
             return postDocument.update({ likeCount: postData.likeCount });
           })
           .then(() => {
@@ -185,7 +190,12 @@ exports.unlikeOnPost = (req,res) =>{
         .doc(`/likes/${data.docs[0].id}`)
         .delete()
         .then(() => {
-          postData.likeCount--;
+          
+          if(postData.likeCount >= 0){
+            postData.likeCount--;
+          }else{
+            postData.likeCount = 0;
+          }
           return postDocument.update({ likeCount: postData.likeCount });
         })
         .then(() => {
